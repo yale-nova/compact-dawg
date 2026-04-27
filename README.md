@@ -11,6 +11,8 @@ The repository contains two main indexes:
 It also includes benchmarks, plotting scripts, range-query tooling, and the
 MDTrie-derived support code needed for spatial validation.
 
+Please contact [Wesley Andrade](mailto:wesleyantonioaguiar@gmail.com) if you have any questions!
+
 ## Repository Layout
 
 - `src/`: core DAWG implementations
