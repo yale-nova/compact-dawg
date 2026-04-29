@@ -28,7 +28,7 @@ Use `bench_dawg_storage` when you already have a raw Morton-key binary and want 
 - [`tools/bench_dawg_sharing.cpp`](../tools/bench_dawg_sharing.cpp)
   Builds `CompactDawg<GB, false, true>` and records structural sharing metrics.
 - [`scripts/plot_dawg_sharing.py`](../scripts/plot_dawg_sharing.py)
-  Plots aggregate sharing, depth profiles, and indegree summaries.
+  Plots aggregate sharing, depth profiles, per-depth DAWG edge counts, and indegree summaries.
 
 Use this pair when the question is structural: how much sharing happened, and where in the key.
 
@@ -155,6 +155,20 @@ The default range-query workflow expects the root-level fixture `./1024d-uniq-10
 - both directories are intentionally untracked by Git
 
 If a tool changes its CSV columns or plot/table naming, update [benchmarks-metrics.md](benchmarks-metrics.md) and any doc that refers to the workflow.
+
+### Plot styling for accessibility
+
+The plotting scripts share [`scripts/_plot_style.py`](../scripts/_plot_style.py),
+which exposes ordered marker, linestyle, and hatch cycles. Series in any new
+plot must use a non-color cue in addition to color so the figures stay readable
+without color (color-deficient viewers, B&W prints):
+
+- **Line plots:** vary marker shape per series via `marker_for(idx)`. Use
+  `markevery` to thin markers when a series has many points.
+- **Multi-axis plots (e.g. dim x planner):** combine `marker_for(method_idx)`
+  with `line_style_for(dim_idx)` so each axis is encoded redundantly.
+- **Bar charts:** combine `hatch_for(idx)` with the bar color and add a thin
+  black edge so the hatch is visible on top of the fill.
 
 ## Tests to run after code changes
 

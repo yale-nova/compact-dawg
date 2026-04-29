@@ -60,12 +60,16 @@ import numpy as np
 import pandas as pd
 from matplotlib.ticker import LogLocator, NullLocator
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _plot_style import hatch_for, marker_for  # noqa: E402
+
 PLOT_TYPES = [
     "sharing_ratio_vs_dim",
     "sharing_ratio_vs_n",
     "finalize_breakdown",
     "edge_saving_heatmap",
     "depth_profile",
+    "depth_edges",
     "depth_heatmap",
     "indegree_histogram",
 ]
@@ -100,6 +104,20 @@ def filter_df(df, filter_dims, filter_n, filter_gb):
     if filter_gb:
         df = df[df["group_bits"].isin(filter_gb)]
     return df
+
+
+def _apply_light_grid(ax, *, axis="both"):
+    """Use a quiet major grid so plot lines stay visually dominant."""
+    ax.grid(
+        True,
+        which="major",
+        axis=axis,
+        linestyle="-",
+        linewidth=0.5,
+        alpha=0.18,
+        color="0.45",
+    )
+    ax.grid(False, which="minor", axis=axis)
 
 
 def _mask_valid_dim_group_bits(df, coord_bits):
@@ -168,10 +186,16 @@ def plot_sharing_ratio_vs_dim(summary, _depth, _indeg, output_dir, show, **kwarg
         return
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    for gb in sorted(sub["group_bits"].unique()):
+    for i, gb in enumerate(sorted(sub["group_bits"].unique())):
         g = sub[sub["group_bits"] == gb].sort_values("dim")
-        ax.plot(g["dim"], g["sharing_ratio"] * 100, marker="o", markersize=5,
-                label=f"GB={gb}")
+        ax.plot(
+            g["dim"],
+            g["sharing_ratio"] * 100,
+            marker=marker_for(i),
+            markersize=6,
+            linewidth=1.4,
+            label=f"GB={gb}",
+        )
 
     ax.set_xlabel("Dimensions")
     ax.set_ylabel("Sharing Ratio = memo_hits / finalize_calls (%)")
@@ -180,7 +204,7 @@ def plot_sharing_ratio_vs_dim(summary, _depth, _indeg, output_dir, show, **kwarg
     ax.set_xticks(sorted(sub["dim"].unique()))
     ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
     ax.legend(title="GROUP_BITS")
-    ax.grid(True, which="both", ls="--", alpha=0.3)
+    _apply_light_grid(ax)
     ax.set_ylim(bottom=0)
 
     fig.tight_layout()
@@ -220,16 +244,22 @@ def plot_sharing_ratio_vs_n(summary, _depth, _indeg, output_dir, show, **kwargs)
     for idx, dim in enumerate(dims):
         ax = axes[idx // cols][idx % cols]
         sub = summary[summary["dim"] == dim]
-        for gb in sorted(sub["group_bits"].unique()):
+        for i, gb in enumerate(sorted(sub["group_bits"].unique())):
             g = sub[sub["group_bits"] == gb].sort_values("n_unique_keys")
-            ax.plot(g["n_unique_keys"], g["sharing_ratio"] * 100, marker="o",
-                    markersize=4, label=f"GB={gb}")
+            ax.plot(
+                g["n_unique_keys"],
+                g["sharing_ratio"] * 100,
+                marker=marker_for(i),
+                markersize=5,
+                linewidth=1.3,
+                label=f"GB={gb}",
+            )
         ax.set_xlabel("N (unique keys inserted)")
         ax.set_ylabel("memo_hits / finalize_calls (%)")
         ax.set_title(f"dim={dim}")
         ax.set_xscale("log")
         ax.legend(fontsize=7, title="GB")
-        ax.grid(True, which="both", ls="--", alpha=0.3)
+        _apply_light_grid(ax)
         ax.set_ylim(bottom=0)
 
     for idx in range(n_dims, rows * cols):
@@ -273,8 +303,25 @@ def plot_finalize_breakdown(summary, _depth, _indeg, output_dir, show, **kwargs)
         hits = g["memo_hits"].values
 
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.bar(x, unique, label="unique_nodes (new)", color="steelblue")
-        ax.bar(x, hits, bottom=unique, label="memo_hits (shared)", color="coral")
+        ax.bar(
+            x,
+            unique,
+            label="unique_nodes (new)",
+            color="steelblue",
+            edgecolor="black",
+            linewidth=0.8,
+            hatch=hatch_for(0),
+        )
+        ax.bar(
+            x,
+            hits,
+            bottom=unique,
+            label="memo_hits (shared)",
+            color="coral",
+            edgecolor="black",
+            linewidth=0.8,
+            hatch=hatch_for(1),
+        )
 
         ax.set_xticks(x)
         ax.set_xticklabels([str(d) for d in dims])
@@ -285,7 +332,7 @@ def plot_finalize_breakdown(summary, _depth, _indeg, output_dir, show, **kwargs)
             f"GB={gb}, N={max_n:,}  —  sharing_ratio = memo_hits / finalize_calls"
         )
         ax.legend()
-        ax.grid(True, axis="y", ls="--", alpha=0.3)
+        _apply_light_grid(ax, axis="y")
 
         fig.tight_layout()
         path = os.path.join(output_dir, f"finalize_breakdown_gb{gb}.png")
@@ -377,12 +424,22 @@ def plot_depth_profile(_summary, depth, _indeg, output_dir, show, **kwargs):
         dims = sorted(gs["dim"].unique())
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        for dim in dims:
+        for i, dim in enumerate(dims):
             dd = gs[(gs["dim"] == dim) & (gs["finalize_calls"] > 0)].sort_values("normalized_depth")
             if dd.empty:
                 continue
-            ax.plot(dd["normalized_depth"], dd["sharing_rate"] * 100, marker=".",
-                    markersize=3, label=f"dim={dim}", alpha=0.8)
+            n_points = len(dd)
+            markevery = max(1, n_points // 18) if n_points > 30 else 1
+            ax.plot(
+                dd["normalized_depth"],
+                dd["sharing_rate"] * 100,
+                marker=marker_for(i),
+                markersize=5,
+                markevery=markevery,
+                linewidth=1.2,
+                label=f"dim={dim}",
+                alpha=0.85,
+            )
 
         ax.set_xlabel(
             "normalized_depth = depth × group_bits / total_bits\n"
@@ -394,12 +451,75 @@ def plot_depth_profile(_summary, depth, _indeg, output_dir, show, **kwargs):
             f"GB={gb}, N={max_n:,}  —  curves aligned across dimensionalities"
         )
         ax.legend(fontsize=7, ncol=2, title="dim")
-        ax.grid(True, which="both", ls="--", alpha=0.3)
+        _apply_light_grid(ax)
         ax.set_ylim(bottom=0)
         ax.set_xlim(0, 1)
 
         fig.tight_layout()
         path = os.path.join(output_dir, f"depth_profile_gb{gb}.png")
+        fig.savefig(path, dpi=200)
+        print(f"Saved {path}")
+        if show:
+            plt.show()
+        plt.close(fig)
+
+
+def plot_depth_edges(_summary, depth, _indeg, output_dir, show, **kwargs):
+    """Per-dim line plot of DAWG edges vs normalized_depth.
+
+    `dawg_edges` counts edges emitted for newly materialized DAWG nodes at each
+    grouped depth. Memo hits are not counted here because they reuse an existing
+    suffix node instead of adding new packed edges.
+    """
+    if depth.empty:
+        return
+
+    max_n = depth["n_keys"].max()
+    sub = depth[depth["n_keys"] == max_n]
+    if sub.empty:
+        return
+
+    need = {"normalized_depth", "dawg_edges"}
+    if not need.issubset(sub.columns):
+        print("Warning: sharing_depth.csv missing dawg_edges — rerun bench_dawg_sharing for depth_edges")
+        return
+
+    gb_values = sorted(sub["group_bits"].unique())
+    for gb in gb_values:
+        gs = sub[sub["group_bits"] == gb]
+        dims = sorted(gs["dim"].unique())
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for i, dim in enumerate(dims):
+            dd = gs[gs["dim"] == dim].sort_values("normalized_depth")
+            if dd.empty:
+                continue
+            n_points = len(dd)
+            markevery = max(1, n_points // 18) if n_points > 30 else 1
+            ax.plot(
+                dd["normalized_depth"],
+                dd["dawg_edges"],
+                marker=marker_for(i),
+                markersize=5,
+                markevery=markevery,
+                linewidth=1.2,
+                label=f"dim={dim}",
+                alpha=0.85,
+            )
+
+        ax.set_xlabel(
+            "normalized_depth = depth × group_bits / total_bits\n"
+            "(0 = root, 1 = deepest level; comparable across all dim/GB)"
+        )
+        ax.set_ylabel("DAWG edges added at depth")
+        ax.set_title(f"DAWG Edge Count vs Normalized Depth\nGB={gb}, N={max_n:,}")
+        ax.set_yscale("log")
+        ax.legend(fontsize=7, ncol=2, title="dim")
+        _apply_light_grid(ax)
+        ax.set_xlim(0, 1)
+
+        fig.tight_layout()
+        path = os.path.join(output_dir, f"depth_edges_gb{gb}.png")
         fig.savefig(path, dpi=200)
         print(f"Saved {path}")
         if show:
@@ -554,17 +674,22 @@ def plot_indegree_histogram(_summary, _depth, indeg, output_dir, show, **kwargs)
             x_positions = list(range(1, cap + 1))
             plot_heights = list(heights)
             colors = ["steelblue"] + ["coral"] * (cap - 1)
+            hatches = [hatch_for(0)] + [hatch_for(1)] * (cap - 1)
 
             # Log y: use NaN where count is 0 so matplotlib omits the bar (empty slot).
             bar_heights = [float(h) if h > 0 else np.nan for h in plot_heights]
 
-            ax.bar(
+            bars = ax.bar(
                 x_positions,
                 bar_heights,
                 width=0.75,
                 align="center",
                 color=colors,
+                edgecolor="black",
+                linewidth=0.6,
             )
+            for bar, hatch in zip(bars, hatches):
+                bar.set_hatch(hatch)
 
             tick_labels = [str(x) for x in range(1, cap + 1)]
             ax.set_xticks(x_positions)
@@ -593,6 +718,29 @@ def plot_indegree_histogram(_summary, _depth, indeg, output_dir, show, **kwargs)
 
         for idx in range(n_dims, rows * cols):
             axes[idx // cols][idx % cols].set_visible(False)
+
+        legend_handles = [
+            plt.Rectangle(
+                (0, 0), 1, 1,
+                facecolor="steelblue", edgecolor="black",
+                linewidth=0.6, hatch=hatch_for(0),
+                label="in-degree = 1 (not shared)",
+            ),
+            plt.Rectangle(
+                (0, 0), 1, 1,
+                facecolor="coral", edgecolor="black",
+                linewidth=0.6, hatch=hatch_for(1),
+                label="in-degree > 1 (shared)",
+            ),
+        ]
+        # Use the first subplot's legend so suptitle has room and the meaning
+        # of the colors/hatches stays close to the bars.
+        axes[0][0].legend(
+            handles=legend_handles,
+            loc="upper right",
+            fontsize=8,
+            framealpha=0.9,
+        )
 
         fig.suptitle(f"In-Degree Distribution (GB={gb}, N={max_n:,})", fontsize=14)
         fig.tight_layout()
@@ -935,6 +1083,7 @@ PLOT_FUNCS = {
     "finalize_breakdown": plot_finalize_breakdown,
     "edge_saving_heatmap": plot_edge_saving_heatmap,
     "depth_profile": plot_depth_profile,
+    "depth_edges": plot_depth_edges,
     "depth_heatmap": plot_depth_heatmap,
     "indegree_histogram": plot_indegree_histogram,
 }

@@ -65,6 +65,7 @@ struct SharingResult {
 
     std::vector<size_t> per_depth_finalize;
     std::vector<size_t> per_depth_hits;
+    std::vector<size_t> per_depth_dawg_edges;
     std::vector<size_t> indegree_hist;
 };
 
@@ -105,6 +106,7 @@ static SharingResult analyze(const std::vector<std::string> &keys, size_t total_
 
     r.per_depth_finalize = dawg.GetPerDepthFinalize();
     r.per_depth_hits = dawg.GetPerDepthHits();
+    r.per_depth_dawg_edges = dawg.GetPerDepthDawgEdges();
     r.indegree_hist = ComputeInDegreeHistogram(dawg);
 
     return r;
@@ -183,19 +185,21 @@ static void write_summary_row(FILE *fp, const SharingResult &r)
 
 static void write_depth_header(FILE *fp)
 {
-    fprintf(fp, "dim,n_keys,group_bits,depth,normalized_depth,finalize_calls,memo_hits,sharing_rate\n");
+    fprintf(fp, "dim,n_keys,group_bits,depth,normalized_depth,finalize_calls,memo_hits,sharing_rate,dawg_edges\n");
 }
 
 static void write_depth_rows(FILE *fp, const SharingResult &r)
 {
-    size_t max_depth = std::max(r.per_depth_finalize.size(), r.per_depth_hits.size());
+    size_t max_depth = std::max(std::max(r.per_depth_finalize.size(), r.per_depth_hits.size()),
+                                r.per_depth_dawg_edges.size());
     for (size_t d = 0; d < max_depth; d++) {
         size_t fc = d < r.per_depth_finalize.size() ? r.per_depth_finalize[d] : 0;
         size_t mh = d < r.per_depth_hits.size() ? r.per_depth_hits[d] : 0;
+        size_t de = d < r.per_depth_dawg_edges.size() ? r.per_depth_dawg_edges[d] : 0;
         double rate = fc > 0 ? static_cast<double>(mh) / static_cast<double>(fc) : 0.0;
         double norm_d = r.total_bits > 0 ? static_cast<double>(d * r.group_bits) / static_cast<double>(r.total_bits) : 0.0;
-        fprintf(fp, "%u,%zu,%u,%zu,%.6f,%zu,%zu,%.8f\n",
-                r.dim, r.n_keys, r.group_bits, d, norm_d, fc, mh, rate);
+        fprintf(fp, "%u,%zu,%u,%zu,%.6f,%zu,%zu,%.8f,%zu\n",
+                r.dim, r.n_keys, r.group_bits, d, norm_d, fc, mh, rate, de);
     }
 }
 

@@ -33,6 +33,9 @@ import numpy as np
 import pandas as pd
 from pandas.errors import EmptyDataError
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _plot_style import hatch_for, marker_for  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Styling
@@ -247,14 +250,25 @@ def plot_cardinality_per_dim(df, outdir):
         fig, ax = plt.subplots(figsize=(14, 6), facecolor="white")
         ax.set_facecolor("white")
 
-        for gw in gws:
+        for i, gw in enumerate(gws):
             sub = dfd[dfd["group_width"] == gw].sort_values("chunk_start_bit")
             # Normalized position: center of each chunk
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             card_n = sub["cardinality_over_n"].values
             color = GW_COLORS.get(gw, "#333333")
-            ax.plot(norm_pos, card_n, label=f"g={gw}", color=color,
-                    linewidth=1.2, alpha=0.85, marker=".", markersize=2)
+            n_points = len(norm_pos)
+            markevery = max(1, n_points // 20) if n_points > 40 else 1
+            ax.plot(
+                norm_pos,
+                card_n,
+                label=f"g={gw}",
+                color=color,
+                linewidth=1.3,
+                alpha=0.9,
+                marker=marker_for(i),
+                markersize=5,
+                markevery=markevery,
+            )
 
         ax.set_xlabel("Normalized bit position (0 = MSB, 1 = LSB)")
         ax.set_ylabel("Cardinality / N")
@@ -303,23 +317,24 @@ def plot_saturation_per_dim(df, outdir):
             label=r"$\rho=1$",
         )
 
-        for gw in gws:
+        for i, gw in enumerate(gws):
             sub = dfd[dfd["group_width"] == gw].sort_values("chunk_start_bit")
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             rho = sub["cardinality_over_kmax"].values.astype(np.float64)
             rho_plot = _smooth_saturation_along_chunks(rho, smooth_frac=SATURATION_SMOOTH_FRAC)
             color = GW_COLORS.get(gw, "#333333")
             npt = len(norm_pos)
-            use_markers = npt <= 400
+            markevery = max(1, npt // 20) if npt > 40 else 1
             ax.plot(
                 norm_pos,
                 rho_plot,
                 label=f"g={gw}",
                 color=color,
-                linewidth=1.35,
-                alpha=0.88,
-                marker="." if use_markers else None,
-                markersize=2 if use_markers else None,
+                linewidth=1.4,
+                alpha=0.9,
+                marker=marker_for(i),
+                markersize=5,
+                markevery=markevery,
                 antialiased=True,
             )
 
@@ -359,7 +374,7 @@ def plot_cross_dim(df, outdir):
 
         fig, ax = plt.subplots(figsize=(14, 6))
 
-        for dim in dims:
+        for i, dim in enumerate(dims):
             sub = dfg[dfg["dim"] == dim].sort_values("chunk_start_bit")
             if sub.empty:
                 continue
@@ -368,8 +383,19 @@ def plot_cross_dim(df, outdir):
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             card_n = sub["cardinality_over_n"].values
             color = DIM_COLORS.get(dim, "#333333")
-            ax.plot(norm_pos, card_n, label=f"{dim}D (N={n_keys:,})",
-                    color=color, linewidth=1.3, alpha=0.85)
+            n_points = len(norm_pos)
+            markevery = max(1, n_points // 20) if n_points > 40 else 1
+            ax.plot(
+                norm_pos,
+                card_n,
+                label=f"{dim}D (N={n_keys:,})",
+                color=color,
+                linewidth=1.4,
+                alpha=0.9,
+                marker=marker_for(i),
+                markersize=5,
+                markevery=markevery,
+            )
 
         ax.set_xlabel("Normalized bit position (0 = MSB, 1 = LSB)")
         ax.set_ylabel("Cardinality / N")
@@ -405,7 +431,7 @@ def plot_cross_dim_saturation(df, outdir):
 
         fig, ax = plt.subplots(figsize=(14, 6))
 
-        for dim in dims:
+        for i, dim in enumerate(dims):
             sub = dfg[dfg["dim"] == dim].sort_values("chunk_start_bit")
             if sub.empty:
                 continue
@@ -414,8 +440,19 @@ def plot_cross_dim_saturation(df, outdir):
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             rho = sub["cardinality_over_kmax"].values
             color = DIM_COLORS.get(dim, "#333333")
-            ax.plot(norm_pos, rho, label=f"{dim}D (N={n_keys:,})",
-                    color=color, linewidth=1.3, alpha=0.85)
+            n_points = len(norm_pos)
+            markevery = max(1, n_points // 20) if n_points > 40 else 1
+            ax.plot(
+                norm_pos,
+                rho,
+                label=f"{dim}D (N={n_keys:,})",
+                color=color,
+                linewidth=1.4,
+                alpha=0.9,
+                marker=marker_for(i),
+                markersize=5,
+                markevery=markevery,
+            )
 
         ax.set_xlabel("Normalized bit position (0 = MSB, 1 = LSB)")
         ax.set_ylabel("Saturation K / min(N, 2^g)")
@@ -551,8 +588,17 @@ def plot_segment_summary(seg_df, outdir):
             row = sub[sub["dim"] == dim]
             heights.append(row["n_segments"].values[0] if len(row) > 0 else 0)
         color = THRESHOLD_COLORS.get(thr, "#333333")
-        ax.bar(x_base + i * bar_width, heights, bar_width,
-               label=f"thr={thr:.2f}", color=color, alpha=0.85)
+        ax.bar(
+            x_base + i * bar_width,
+            heights,
+            bar_width,
+            label=f"thr={thr:.2f}",
+            color=color,
+            alpha=0.9,
+            edgecolor="black",
+            linewidth=0.6,
+            hatch=hatch_for(i),
+        )
 
     ax.set_xticks(x_base + bar_width * (len(thresholds) - 1) / 2)
     ax.set_xticklabels([f"{d}D" for d in dims])

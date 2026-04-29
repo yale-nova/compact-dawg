@@ -21,10 +21,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _plot_style import marker_for  # noqa: E402
 
 
 REQUIRED_COLS = (
@@ -240,14 +245,14 @@ def main() -> None:
         ax_l.set_yscale("log")
 
     # Right: n_keys vs avg_query_ms, one series per group_bits
-    for gb in gbs:
+    for i, gb in enumerate(gbs):
         sub = df[df["group_bits"] == gb].sort_values("n_keys")
         ax_r.plot(
             sub["n_keys"].astype(int),
             sub["avg_query_ms"].astype(float),
-            marker="o",
+            marker=marker_for(i),
             linewidth=1.4,
-            markersize=5,
+            markersize=6,
             label=f"GB={gb}",
         )
     ax_r.set_xlabel("N (keys in DAWG)")

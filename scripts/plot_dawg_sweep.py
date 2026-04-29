@@ -46,6 +46,9 @@ import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _plot_style import marker_for  # noqa: E402
+
 PLOT_TYPES = [
     "storage_sweep",
     "time_sweep",
@@ -352,11 +355,18 @@ def _plot_sweep_facets(
         for idx, dim in enumerate(dims):
             ax = axes[idx // cols][idx % cols]
             sub = vs[vs["dim"] == dim]
-            for method in methods:
+            for j, method in enumerate(methods):
                 ms = sub[sub["method"] == method].sort_values(xcol)
                 if ms.empty:
                     continue
-                ax.plot(ms[xcol], ms[ycol], marker="o", markersize=4, label=method)
+                ax.plot(
+                    ms[xcol],
+                    ms[ycol],
+                    marker=marker_for(j),
+                    markersize=5,
+                    linewidth=1.3,
+                    label=method,
+                )
             ax.set_xlabel("N (unique keys)")
             ax.set_ylabel(ylabel)
             ax.set_title(f"dim={dim}")
@@ -373,11 +383,18 @@ def _plot_sweep_facets(
         if sub_all.empty:
             return None
         fig, ax = plt.subplots(figsize=(10, 6))
-        for method in methods:
+        for j, method in enumerate(methods):
             ms = sub_all[sub_all["method"] == method].sort_values("dim")
             if ms.empty:
                 continue
-            ax.plot(ms["dim"], ms[ycol], marker="o", markersize=5, label=method)
+            ax.plot(
+                ms["dim"],
+                ms[ycol],
+                marker=marker_for(j),
+                markersize=6,
+                linewidth=1.4,
+                label=method,
+            )
         ax.set_xlabel("Dimensions")
         ax.set_ylabel(ylabel)
         ax.set_xscale("log", base=2)
@@ -397,7 +414,7 @@ def _plot_sweep_facets(
         if plot_vs.empty:
             return None
         slice_max_n_for_title = gb_max_n
-        # One axes: one line per dimension (distinct colors by dim).
+        # One axes: one line per dimension (distinct color and marker by dim).
         fig, ax = plt.subplots(figsize=(10, 6))
         cmap = plt.get_cmap("tab10")
         for i, dim in enumerate(sorted(plot_vs["dim"].unique())):
@@ -407,8 +424,9 @@ def _plot_sweep_facets(
             ax.plot(
                 sub_dim[xcol],
                 sub_dim[ycol],
-                marker="o",
-                markersize=5,
+                marker=marker_for(i),
+                markersize=6,
+                linewidth=1.4,
                 label=f"{int(dim)}D",
                 color=cmap(i % 10),
             )
@@ -455,8 +473,9 @@ def _plot_best_fixed_scheme_by_dim(
         ax.plot(
             ms["n_unique_keys"],
             ms[ycol],
-            marker="o",
-            markersize=5,
+            marker=marker_for(i),
+            markersize=6,
+            linewidth=1.4,
             label=f"{int(row.dim)}D ({row.method})",
             color=cmap(i % 10),
         )
@@ -642,10 +661,18 @@ def _plot_suffix_comparison(
                 if ms.empty:
                     continue
                 color = cmap(i % 10)
-                ax.plot(ms[xcol], ms["pre_suffix_normalized_bpk"], ls="--", marker="o",
-                        markersize=4, color=color, label=f"{method} before")
-                ax.plot(ms[xcol], ms["post_suffix_normalized_bpk"], ls="-", marker="o",
-                        markersize=4, color=color, label=f"{method} after")
+                mk = marker_for(i)
+                ax.plot(
+                    ms[xcol], ms["pre_suffix_normalized_bpk"],
+                    ls="--", marker=mk, markersize=5,
+                    markerfacecolor="white", markeredgecolor=color,
+                    color=color, label=f"{method} before",
+                )
+                ax.plot(
+                    ms[xcol], ms["post_suffix_normalized_bpk"],
+                    ls="-", marker=mk, markersize=5,
+                    color=color, label=f"{method} after",
+                )
             ax.set_xlabel("N (unique keys)")
             ax.set_ylabel("Normalized BPK")
             ax.set_title(f"dim={dim}")
@@ -666,10 +693,18 @@ def _plot_suffix_comparison(
             if ms.empty:
                 continue
             color = cmap(i % 10)
-            ax.plot(ms["dim"], ms["pre_suffix_normalized_bpk"], ls="--", marker="o",
-                    markersize=5, color=color, label=f"{method} before")
-            ax.plot(ms["dim"], ms["post_suffix_normalized_bpk"], ls="-", marker="o",
-                    markersize=5, color=color, label=f"{method} after")
+            mk = marker_for(i)
+            ax.plot(
+                ms["dim"], ms["pre_suffix_normalized_bpk"],
+                ls="--", marker=mk, markersize=6,
+                markerfacecolor="white", markeredgecolor=color,
+                color=color, label=f"{method} before",
+            )
+            ax.plot(
+                ms["dim"], ms["post_suffix_normalized_bpk"],
+                ls="-", marker=mk, markersize=6,
+                color=color, label=f"{method} after",
+            )
         ax.set_xlabel("Dimensions")
         ax.set_ylabel("Normalized BPK")
         ax.set_xscale("log", base=2)
@@ -692,10 +727,18 @@ def _plot_suffix_comparison(
             if ms.empty:
                 continue
             color = cmap(i % 10)
-            ax.plot(ms["group_bits"], ms["pre_suffix_normalized_bpk"], ls="--", marker="o",
-                    markersize=5, color=color, label=f"{int(dim)}D before")
-            ax.plot(ms["group_bits"], ms["post_suffix_normalized_bpk"], ls="-", marker="o",
-                    markersize=5, color=color, label=f"{int(dim)}D after")
+            mk = marker_for(i)
+            ax.plot(
+                ms["group_bits"], ms["pre_suffix_normalized_bpk"],
+                ls="--", marker=mk, markersize=6,
+                markerfacecolor="white", markeredgecolor=color,
+                color=color, label=f"{int(dim)}D before",
+            )
+            ax.plot(
+                ms["group_bits"], ms["post_suffix_normalized_bpk"],
+                ls="-", marker=mk, markersize=6,
+                color=color, label=f"{int(dim)}D after",
+            )
         ax.set_ylabel("Normalized BPK")
         _configure_group_bits_xaxis(ax, plot_vs["group_bits"])
         ax.grid(True, which="both", ls="--", alpha=0.3)
@@ -734,12 +777,18 @@ def _plot_suffix_savings(
         for idx, dim in enumerate(dims):
             ax = axes[idx // cols][idx % cols]
             sub = vs[vs["dim"] == dim]
-            for method in methods:
+            for j, method in enumerate(methods):
                 ms = sub[sub["method"] == method].sort_values(xcol)
                 if ms.empty:
                     continue
-                ax.plot(ms[xcol], ms["suffix_collapse_saving_pct_plot"], marker="o",
-                        markersize=4, label=method)
+                ax.plot(
+                    ms[xcol],
+                    ms["suffix_collapse_saving_pct_plot"],
+                    marker=marker_for(j),
+                    markersize=5,
+                    linewidth=1.3,
+                    label=method,
+                )
             ax.set_xlabel("N (unique keys)")
             ax.set_ylabel("Saved by suffix collapse (%)")
             ax.set_title(f"dim={dim}")
@@ -754,12 +803,18 @@ def _plot_suffix_savings(
         if sub_all.empty:
             return None
         fig, ax = plt.subplots(figsize=(10, 6))
-        for method in methods:
+        for j, method in enumerate(methods):
             ms = sub_all[sub_all["method"] == method].sort_values("dim")
             if ms.empty:
                 continue
-            ax.plot(ms["dim"], ms["suffix_collapse_saving_pct_plot"], marker="o",
-                    markersize=5, label=method)
+            ax.plot(
+                ms["dim"],
+                ms["suffix_collapse_saving_pct_plot"],
+                marker=marker_for(j),
+                markersize=6,
+                linewidth=1.4,
+                label=method,
+            )
         ax.set_xlabel("Dimensions")
         ax.set_ylabel("Saved by suffix collapse (%)")
         ax.set_xscale("log", base=2)
@@ -781,8 +836,15 @@ def _plot_suffix_savings(
             ms = plot_vs[plot_vs["dim"] == dim].sort_values("group_bits")
             if ms.empty:
                 continue
-            ax.plot(ms["group_bits"], ms["suffix_collapse_saving_pct_plot"], marker="o",
-                    markersize=5, label=f"{int(dim)}D", color=cmap(i % 10))
+            ax.plot(
+                ms["group_bits"],
+                ms["suffix_collapse_saving_pct_plot"],
+                marker=marker_for(i),
+                markersize=6,
+                linewidth=1.4,
+                label=f"{int(dim)}D",
+                color=cmap(i % 10),
+            )
         ax.set_ylabel("Saved by suffix collapse (%)")
         _configure_group_bits_xaxis(ax, plot_vs["group_bits"])
         ax.grid(True, which="both", ls="--", alpha=0.3)

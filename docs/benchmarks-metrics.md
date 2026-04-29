@@ -49,6 +49,7 @@ These fields come from `TRACK_SHARING` instrumentation and the sharing benchmark
 - `depth`: grouped depth index in a particular run
 - `normalized_depth`: `depth * group_bits / total_bits`
 - `sharing_rate`: per-depth sharing ratio
+- `dawg_edges`: edges emitted for newly materialized DAWG nodes at that depth
 
 `normalized_depth` allows contributors to compare where sharing appears along keys of very different total lengths.
 

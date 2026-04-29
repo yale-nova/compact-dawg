@@ -14,9 +14,13 @@ log-scaled dimension axis so wide dimension ranges stay readable.
 
 import argparse
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _plot_style import hatch_for, line_style_for, marker_for  # noqa: E402
 
 
 def parse_args():
@@ -382,12 +386,19 @@ def export_tables(df: pd.DataFrame, outdir: str, input_path: str) -> None:
 def plot_delta_lines(df: pd.DataFrame, outdir: str, ycol: str, title: str, ylabel: str,
                      filename: str) -> None:
     plt.figure(figsize=(10, 6))
+    dims = sorted(int(x) for x in df["dim"].dropna().unique())
+    methods = sorted(str(x) for x in df["segmentation_method"].dropna().unique())
     for (dim, method), sub in df.groupby(["dim", "segmentation_method"], sort=True):
         sub = sub.sort_values("rho_threshold")
+        method_idx = methods.index(method)
+        dim_idx = dims.index(int(dim))
         plt.plot(
             sub["rho_threshold"],
             sub[ycol],
-            marker="o",
+            marker=marker_for(method_idx),
+            markersize=6,
+            linewidth=1.3,
+            linestyle=line_style_for(dim_idx),
             label=f"{dim}d {method}",
         )
     plt.axhline(0.0, color="black", linestyle="--", linewidth=1)
@@ -543,7 +554,14 @@ def plot_best_plan_time_by_dim(df: pd.DataFrame, outdir: str) -> None:
 
     x = range(len(best_dynamic_dawg))
     plt.figure(figsize=(10, 6))
-    plt.bar(x, best_dynamic_dawg["plan_s"], label="Plan time")
+    plt.bar(
+        x,
+        best_dynamic_dawg["plan_s"],
+        label="Plan time",
+        edgecolor="black",
+        linewidth=0.8,
+        hatch=hatch_for(1),
+    )
 
     for pos, (_, row) in enumerate(best_dynamic_dawg.iterrows()):
         label = f"{row['segmentation_method']}\n$\\rho$={row['rho_threshold']}"
@@ -617,13 +635,16 @@ def plot_build_delta_cd(df: pd.DataFrame, outdir: str) -> None:
 
 def plot_segments_vs_storage(df: pd.DataFrame, outdir: str) -> None:
     plt.figure(figsize=(10, 6))
-    markers = {"greedy_rho": "o", "greedy_cost_aware": "s"}
+    methods = sorted(str(x) for x in df["segmentation_method"].dropna().unique())
     for (dim, method), sub in df.groupby(["dim", "segmentation_method"], sort=True):
+        method_idx = methods.index(method)
         plt.scatter(
             sub["n_segments"],
             sub["normalized_bpk"],
-            s=90,
-            marker=markers.get(method, "o"),
+            s=110,
+            marker=marker_for(method_idx),
+            edgecolor="black",
+            linewidth=0.6,
             label=f"{dim}d {method}",
         )
     plt.title(titled("DynamicDawg Segments vs Normalized Storage", df))
@@ -638,12 +659,19 @@ def plot_segments_vs_storage(df: pd.DataFrame, outdir: str) -> None:
 
 def plot_threshold_context(df: pd.DataFrame, outdir: str) -> None:
     plt.figure(figsize=(10, 6))
+    dims = sorted(int(x) for x in df["dim"].dropna().unique())
+    methods = sorted(str(x) for x in df["segmentation_method"].dropna().unique())
     for (dim, method), sub in df.groupby(["dim", "segmentation_method"], sort=True):
         sub = sub.sort_values("rho_threshold")
+        method_idx = methods.index(method)
+        dim_idx = dims.index(int(dim))
         plt.plot(
             sub["rho_threshold"],
             sub["n_segments"],
-            marker="o",
+            marker=marker_for(method_idx),
+            markersize=6,
+            linewidth=1.3,
+            linestyle=line_style_for(dim_idx),
             label=f"{dim}d {method}",
         )
     plt.title(titled("Variable-Width Segments vs Greedy Threshold", df))

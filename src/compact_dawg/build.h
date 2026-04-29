@@ -36,6 +36,10 @@ uint32_t CompactDawg<GROUP_BITS, PATH_COMPRESS, TRACK_SHARING>::Finalize(const N
         bool is_last = (i == node.edges.size() - 1);
         temp_edges_.push_back({node.edges[i].label, node.edges[i].target, is_last});
     }
+    if constexpr (TRACK_SHARING) {
+        if (depth < sharing_.per_depth_dawg_edges.size())
+            sharing_.per_depth_dawg_edges[depth] += node.edges.size();
+    }
 
     memo_[node] = start_idx;
     return start_idx;
@@ -129,6 +133,7 @@ void CompactDawg<GROUP_BITS, PATH_COMPRESS, TRACK_SHARING>::Insert(const std::st
         if constexpr (TRACK_SHARING) {
             sharing_.per_depth_finalize.resize(key.size() + 1, 0);
             sharing_.per_depth_hits.resize(key.size() + 1, 0);
+            sharing_.per_depth_dawg_edges.resize(key.size() + 1, 0);
         }
     }
 

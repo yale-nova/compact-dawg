@@ -93,6 +93,7 @@ private:
         SharingStats stats;
         std::vector<size_t> per_depth_finalize;
         std::vector<size_t> per_depth_hits;
+        std::vector<size_t> per_depth_dawg_edges;
     };
     [[no_unique_address]] std::conditional_t<TRACK_SHARING, SharingState, NoSharingState> sharing_;
 
@@ -257,6 +258,12 @@ public:
         requires(TRACK_SHARING)
     {
         return sharing_.per_depth_hits;
+    }
+
+    const std::vector<size_t> &GetPerDepthDawgEdges() const
+        requires(TRACK_SHARING)
+    {
+        return sharing_.per_depth_dawg_edges;
     }
 
 private:
