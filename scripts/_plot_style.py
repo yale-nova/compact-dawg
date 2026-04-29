@@ -11,6 +11,9 @@ Design rules:
 - Bars and stacked bars use distinct hatch patterns combined with color.
 - For very dense lines, callers should pass ``markevery`` to thin markers so
   shapes stay readable without crowding the curve.
+- For curves with long flat regions at a floor or ceiling (e.g., saturation
+  plots that hit 1.0 across all series), use ``interesting_marker_indices``
+  to put markers only where the curves are doing something.
 
 Usage::
 
@@ -23,6 +26,8 @@ Usage::
 """
 
 from __future__ import annotations
+
+import numpy as np
 
 MARKER_CYCLE: tuple[str, ...] = (
     "o",  # circle
@@ -77,3 +82,38 @@ def line_style_for(idx: int) -> object:
 def hatch_for(idx: int) -> str:
     """Return a distinct hatch pattern for the given bar/wedge index."""
     return HATCH_CYCLE[idx % len(HATCH_CYCLE)]
+
+
+def interesting_marker_indices(
+    values,
+    *,
+    floor: float | None = None,
+    ceiling: float | None = None,
+    max_markers: int = 18,
+):
+    """Pick marker indices in the ``(floor, ceiling)`` band of ``values``.
+
+    Designed for ``markevery`` on plots that have long flat regions at a
+    floor or ceiling (saturation plateau, log-scale floor, sharing-rate at
+    shallow depth, etc.). Without this, every series ends up stacking
+    markers in the same flat region and the figure looks busy.
+
+    Returns a Python ``list`` of indices into ``values`` where the value is
+    strictly above ``floor`` (when given) and strictly below ``ceiling``
+    (when given), uniformly subsampled to about ``max_markers`` entries.
+    Falls back to ``slice(None)`` (every point) when no value is in the
+    band, so callers preserve their previous behavior on edge cases.
+    """
+    arr = np.asarray(values, dtype=float)
+    mask = np.ones(arr.shape, dtype=bool)
+    if floor is not None:
+        mask &= arr > float(floor)
+    if ceiling is not None:
+        mask &= arr < float(ceiling)
+    candidates = np.flatnonzero(mask)
+    if candidates.size == 0:
+        return slice(None)
+    if candidates.size <= max_markers:
+        return list(candidates)
+    step = max(1, candidates.size // max_markers)
+    return list(candidates[::step])

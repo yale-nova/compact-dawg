@@ -485,17 +485,16 @@ def _plot_best_fixed_scheme_by_dim(
     ax.set_xscale("log")
     if storage_y_log:
         ax.set_yscale("log")
-    ax.grid(True, which="both", ls="--", alpha=0.3)
+    ax.grid(True, which="major", ls="--", alpha=0.3)
+    ax.grid(False, which="minor")
     ax.legend(
         fontsize=8,
-        ncol=1,
+        ncol=2,
         title="Chosen fixed scheme",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.0),
-        borderaxespad=0.0,
+        loc="center left",
     )
     fig.suptitle(title_bits, fontsize=14)
-    fig.tight_layout(rect=(0.0, 0.0, 0.82, 1.0))
+    fig.tight_layout()
     return fig
 
 
@@ -558,7 +557,7 @@ def plot_storage_sweep(
                             dtype_tag,
                         )
                         best_path = os.path.join(output_dir, f"{best_stem}.png")
-                        best_fig.savefig(best_path, dpi=200, bbox_inches="tight")
+                        best_fig.savefig(best_path, dpi=200)
                         print(f"Saved {best_path}")
                         if show:
                             plt.show()

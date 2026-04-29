@@ -34,7 +34,7 @@ import pandas as pd
 from pandas.errors import EmptyDataError
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _plot_style import hatch_for, marker_for  # noqa: E402
+from _plot_style import hatch_for, interesting_marker_indices, marker_for  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -256,8 +256,9 @@ def plot_cardinality_per_dim(df, outdir):
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             card_n = sub["cardinality_over_n"].values
             color = GW_COLORS.get(gw, "#333333")
-            n_points = len(norm_pos)
-            markevery = max(1, n_points // 20) if n_points > 40 else 1
+            # Skip markers on the ρ≈0 floor and the ρ≈1 plateau; they would
+            # otherwise stack across every group width in the same flat region.
+            markevery = interesting_marker_indices(card_n, floor=0.02, ceiling=0.98)
             ax.plot(
                 norm_pos,
                 card_n,
@@ -323,8 +324,9 @@ def plot_saturation_per_dim(df, outdir):
             rho = sub["cardinality_over_kmax"].values.astype(np.float64)
             rho_plot = _smooth_saturation_along_chunks(rho, smooth_frac=SATURATION_SMOOTH_FRAC)
             color = GW_COLORS.get(gw, "#333333")
-            npt = len(norm_pos)
-            markevery = max(1, npt // 20) if npt > 40 else 1
+            # Skip markers on the ρ≈0 floor and the ρ≈1 plateau so curves
+            # stop stacking markers vertically in the saturated region.
+            markevery = interesting_marker_indices(rho_plot, floor=0.02, ceiling=0.98)
             ax.plot(
                 norm_pos,
                 rho_plot,
@@ -383,8 +385,7 @@ def plot_cross_dim(df, outdir):
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             card_n = sub["cardinality_over_n"].values
             color = DIM_COLORS.get(dim, "#333333")
-            n_points = len(norm_pos)
-            markevery = max(1, n_points // 20) if n_points > 40 else 1
+            markevery = interesting_marker_indices(card_n, floor=0.02, ceiling=0.98)
             ax.plot(
                 norm_pos,
                 card_n,
@@ -440,8 +441,7 @@ def plot_cross_dim_saturation(df, outdir):
             norm_pos = (sub["chunk_start_bit"].values + gw / 2.0) / total_bits
             rho = sub["cardinality_over_kmax"].values
             color = DIM_COLORS.get(dim, "#333333")
-            n_points = len(norm_pos)
-            markevery = max(1, n_points // 20) if n_points > 40 else 1
+            markevery = interesting_marker_indices(rho, floor=0.02, ceiling=0.98)
             ax.plot(
                 norm_pos,
                 rho,

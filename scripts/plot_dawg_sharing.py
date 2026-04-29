@@ -61,7 +61,7 @@ import pandas as pd
 from matplotlib.ticker import LogLocator, NullLocator
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _plot_style import hatch_for, marker_for  # noqa: E402
+from _plot_style import hatch_for, interesting_marker_indices, marker_for  # noqa: E402
 
 PLOT_TYPES = [
     "sharing_ratio_vs_dim",
@@ -428,17 +428,19 @@ def plot_depth_profile(_summary, depth, _indeg, output_dir, show, **kwargs):
             dd = gs[(gs["dim"] == dim) & (gs["finalize_calls"] > 0)].sort_values("normalized_depth")
             if dd.empty:
                 continue
-            n_points = len(dd)
-            markevery = max(1, n_points // 18) if n_points > 30 else 1
+            sharing_pct = dd["sharing_rate"].to_numpy(dtype=float) * 100.0
+            # Skip markers in the long flat region near 0% so they do not stack
+            # across all dims; the line still passes through.
+            markevery = interesting_marker_indices(sharing_pct, floor=0.5)
             ax.plot(
                 dd["normalized_depth"],
-                dd["sharing_rate"] * 100,
+                sharing_pct,
                 marker=marker_for(i),
                 markersize=5,
                 markevery=markevery,
-                linewidth=1.2,
+                linewidth=1.3,
                 label=f"dim={dim}",
-                alpha=0.85,
+                alpha=0.9,
             )
 
         ax.set_xlabel(
@@ -494,17 +496,20 @@ def plot_depth_edges(_summary, depth, _indeg, output_dir, show, **kwargs):
             dd = gs[gs["dim"] == dim].sort_values("normalized_depth")
             if dd.empty:
                 continue
-            n_points = len(dd)
-            markevery = max(1, n_points // 18) if n_points > 30 else 1
+            edges = dd["dawg_edges"].to_numpy(dtype=float)
+            # Hide markers at the log-axis floor (very few edges at degenerate
+            # shallow depths) so they do not stack at y≈1 across every series.
+            series_floor = max(1.0, edges.max() / 100.0)
+            markevery = interesting_marker_indices(edges, floor=series_floor)
             ax.plot(
                 dd["normalized_depth"],
-                dd["dawg_edges"],
+                edges,
                 marker=marker_for(i),
                 markersize=5,
                 markevery=markevery,
-                linewidth=1.2,
+                linewidth=1.3,
                 label=f"dim={dim}",
-                alpha=0.85,
+                alpha=0.9,
             )
 
         ax.set_xlabel(
